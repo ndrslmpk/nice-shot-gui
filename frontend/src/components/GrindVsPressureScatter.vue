@@ -49,7 +49,7 @@ const options = {
 </script>
 
 <template>
-	<div>
-		<Scatter class="h-96" :data="data" :options="options" />
+	<div class="h-96">
+		<Scatter :data="data" :options="options" />
 	</div>
 </template>
