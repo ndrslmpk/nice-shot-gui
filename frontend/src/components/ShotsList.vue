@@ -73,19 +73,19 @@ function formatDate(iso: string) {
               @click="setSort('grind_size_actual')"
               class="p-2 cursor-pointer text-left select-none"
             >
-              Grind
+              Grind Size
             </th>
             <th
               @click="setSort('brew_time_seconds')"
               class="p-2 cursor-pointer text-left select-none"
             >
-              Seconds
+              Brew Seconds
             </th>
             <th
               @click="setSort('peak_pressure_bar')"
               class="p-2 cursor-pointer text-left select-none"
             >
-              Pressure
+              Pressure (bar)
             </th>
             <th @click="setSort('dose_grams')" class="p-2 cursor-pointer text-left select-none">
               Dose (g)
