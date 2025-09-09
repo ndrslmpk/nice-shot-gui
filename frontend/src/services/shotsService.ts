@@ -4,12 +4,10 @@ export type ShotsResponse = {
   data: Shot[]
 }
 
-const API_BASE_URL = 'http://localhost:8080/api'
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? ''
 
 export async function fetchShots(limit: number = 100): Promise<Shot[]> {
-  // export async function fetchShots(): Promise<Shot[]> {
   const url = `${API_BASE_URL}/shots?limit=${encodeURIComponent(limit)}`
-  // const url = `${API_BASE_URL}/shots}`
   const response = await fetch(url, {
     method: 'GET',
     headers: { Accept: 'application/json' },

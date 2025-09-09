@@ -31,8 +31,6 @@ Server runs at `http://localhost:8080` with these routes:
 
 - `GET /api/health`
 - `GET /api/shots?limit=100` – most recent first
-- `GET /api/stats/overview` – aggregates
-- `GET /api/stats/daily` – daily averages for line chart
 
 ### Run frontend (Vue + Vite)
 

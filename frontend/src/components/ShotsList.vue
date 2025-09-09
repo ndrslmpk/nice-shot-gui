@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useShotsStore, type Shot } from '@/stores/shots'
 
 const props = defineProps<{ limit?: number }>()
 const store = useShotsStore()
 
-onMounted(() => store.fetchShots(props.limit ?? 100))
 watch(
   () => props.limit,
   (n) => {
