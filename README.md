@@ -40,7 +40,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:5173`. The frontend expects the backend at `http://localhost:8080/api`. To change it, set `VITE_API_BASE` in an `.env` file in `frontend/`.
+Open `http://localhost:5173`. The frontend expects the backend at `http://localhost:8080/api`. To change it, set `VITE_API_BASE_URL` in an `.env` file in `frontend/`.
 
 ### Notes
 
