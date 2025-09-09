@@ -10,7 +10,7 @@ const props = defineProps<{ limit?: number }>()
 
 const store = useShotsStore()
 onMounted(() => {
-	if (store.shots.length === 0) store.fetchShots(props.limit ?? 100)
+	if (store.shots.length === 0 && !store.loading) store.fetchShots(props.limit ?? 100)
 })
 
 // Group by YYYY-MM-DD and compute average brew_time_seconds

@@ -4,11 +4,11 @@ import Introduction from '../components/IntroductionSection.vue'
 import ShotsList from '../components/ShotsList.vue'
 import BrewTimeTrend from '@/components/BrewTimeTrend.vue';
 import { useShotsStore } from '@/stores/shots';
-import { onMounted } from 'vue';
+import { onBeforeMount } from 'vue';
 
 const store = useShotsStore()
 
-onMounted(() => store.fetchShots())
+onBeforeMount(() => store.fetchShots())
 </script>
 
 <template>

@@ -24,5 +24,13 @@ export const useShotsStore = defineStore('shots', () => {
     }
   }
 
+  // async function getShots(limit: number = 100, force: boolean = false): Promise<Shot[]> {
+  //   if (!force && shots.value.length > 0) {
+  //     return shots.value
+  //   }
+  //   await fetchShots(limit)
+  //   return shots.value
+  // }
+
   return { shots, loading, error, fetchShots }
 })
