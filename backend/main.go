@@ -4,6 +4,7 @@ import (
 	"math"
 	"math/rand"
 	"net/http"
+	"nice-shot/backend/models"
 	"sort"
 	"strconv"
 	"time"
@@ -13,27 +14,9 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 )
 
-// Shot models one espresso shot record
-type Shot struct {
-	ShotID          string    `json:"shot_id"`
-	BrewTime        time.Time `json:"brew_time"`
-	MachineID       string    `json:"machine_id"`
-	UserID          string    `json:"user_id"`
-	SoftwareBundle  string    `json:"software_bundle"`
-	CoffeeType      string    `json:"coffee_type"`
-	RecipeID        string    `json:"recipe_id"`
-	GrindSizeActual int       `json:"grind_size_actual"`
-	GrindSizeTarget int       `json:"grind_size_target"`
-	DoseGrams       float64   `json:"dose_grams"`
-	DoseTargetGrams float64   `json:"dose_target_grams"`
-	BrewTimeSeconds float64   `json:"brew_time_seconds"`
-	PeakPressureBar float64   `json:"peak_pressure_bar"`
-	LastStatus      string    `json:"last_status"`
-}
-
 var (
 	// shots is our in-memory dataset
-	shots []Shot
+	shots []models.Shot
 )
 
 func main() {
@@ -52,14 +35,13 @@ func main() {
 	api := e.Group("/api")
 	api.GET("/health", func(c echo.Context) error { return c.JSON(http.StatusOK, map[string]string{"status": "ok"}) })
 	api.GET("/shots", handleGetShots)
-	api.GET("/stats/overview", handleGetOverviewStats)
-	api.GET("/stats/daily", handleGetDailyStats)
 
 	e.Logger.Fatal(e.Start(":8080"))
 }
 
 // generateMockShots creates N records with dates from Aug 1 to today
-func generateMockShots(n int) []Shot {
+func generateMockShots(n int) []models.Shot {
+	var mocksArr []models.Shot
 	const seed int64 = 20240801
 	prng := rand.New(rand.NewSource(seed))
 
@@ -76,10 +58,10 @@ func generateMockShots(n int) []Shot {
 	bundles := []string{"stable-1.4.2", "stable-1.5.0", "edge-1.6.0"}
 	coffeeTypes := []string{"espresso", "ristretto", "lungo"}
 	statuses := []string{"ok", "ok", "ok", "ok", "warning", "error"}
-
-	var out []Shot
 	daysRange := int(now.Sub(aug1).Hours()/24) + 1
+
 	for i := 0; i < n; i++ {
+		// Prepare MockData
 		d := prng.Intn(daysRange)
 		day := aug1.Add(time.Duration(d) * 24 * time.Hour)
 		// Random time of day between 6:00 and 18:00
@@ -94,7 +76,7 @@ func generateMockShots(n int) []Shot {
 		pressure := clampFloat(7.0+prng.NormFloat64()*1.2, 6.0, 11.0)
 		brewSeconds := clampFloat(27.0+prng.NormFloat64()*4.0, 18.0, 40.0)
 
-		shot := Shot{
+		shot := models.Shot{
 			ShotID:          uuid.NewString(),
 			BrewTime:        brewAt,
 			MachineID:       pick(machines, prng),
@@ -110,12 +92,12 @@ func generateMockShots(n int) []Shot {
 			PeakPressureBar: round2(pressure),
 			LastStatus:      pick(statuses, prng),
 		}
-		out = append(out, shot)
+		mocksArr = append(mocksArr, shot)
 	}
 
 	// Sort by time asc to ease later slicing; handlers can reverse when needed
-	sort.Slice(out, func(i, j int) bool { return out[i].BrewTime.Before(out[j].BrewTime) })
-	return out
+	sort.Slice(mocksArr, func(i, j int) bool { return mocksArr[i].BrewTime.Before(mocksArr[j].BrewTime) })
+	return mocksArr
 }
 
 func handleGetShots(c echo.Context) error {
@@ -135,7 +117,7 @@ func handleGetShots(c echo.Context) error {
 		start = 0
 	}
 	// reverse order (newest first)
-	var recent []Shot
+	var recent []models.Shot
 	for i := n - 1; i >= start; i-- {
 		recent = append(recent, shots[i])
 		if len(recent) >= limit {
@@ -143,89 +125,6 @@ func handleGetShots(c echo.Context) error {
 		}
 	}
 	return c.JSON(http.StatusOK, recent)
-}
-
-type OverviewStats struct {
-	TotalShots         int     `json:"total_shots"`
-	AvgBrewTimeSeconds float64 `json:"avg_brew_time_seconds"`
-	MinBrewTimeSeconds float64 `json:"min_brew_time_seconds"`
-	MaxBrewTimeSeconds float64 `json:"max_brew_time_seconds"`
-	AvgPeakPressureBar float64 `json:"avg_peak_pressure_bar"`
-	SuccessRatePercent float64 `json:"success_rate_percent"`
-}
-
-func handleGetOverviewStats(c echo.Context) error {
-	if len(shots) == 0 {
-		return c.JSON(http.StatusOK, OverviewStats{})
-	}
-	var sumBrew, minBrew, maxBrew, sumPressure float64
-	minBrew = math.MaxFloat64
-	var okCount int
-	for _, s := range shots {
-		sumBrew += s.BrewTimeSeconds
-		if s.BrewTimeSeconds < minBrew {
-			minBrew = s.BrewTimeSeconds
-		}
-		if s.BrewTimeSeconds > maxBrew {
-			maxBrew = s.BrewTimeSeconds
-		}
-		sumPressure += s.PeakPressureBar
-		if s.LastStatus == "ok" {
-			okCount++
-		}
-	}
-	n := float64(len(shots))
-	stats := OverviewStats{
-		TotalShots:         len(shots),
-		AvgBrewTimeSeconds: round2(sumBrew / n),
-		MinBrewTimeSeconds: round2(minBrew),
-		MaxBrewTimeSeconds: round2(maxBrew),
-		AvgPeakPressureBar: round2(sumPressure / n),
-		SuccessRatePercent: round2(float64(okCount) / n * 100.0),
-	}
-	return c.JSON(http.StatusOK, stats)
-}
-
-type DailyStat struct {
-	Date               string  `json:"date"`
-	Count              int     `json:"count"`
-	AvgBrewTimeSeconds float64 `json:"avg_brew_time_seconds"`
-	AvgPeakPressureBar float64 `json:"avg_peak_pressure_bar"`
-}
-
-func handleGetDailyStats(c echo.Context) error {
-	// Aggregate per YYYY-MM-DD
-	type agg struct {
-		sumBrew, sumPressure float64
-		count                int
-	}
-	m := map[string]*agg{}
-	for _, s := range shots {
-		key := s.BrewTime.Format("2006-01-02")
-		if _, ok := m[key]; !ok {
-			m[key] = &agg{}
-		}
-		a := m[key]
-		a.sumBrew += s.BrewTimeSeconds
-		a.sumPressure += s.PeakPressureBar
-		a.count++
-	}
-	var days []string
-	for k := range m {
-		days = append(days, k)
-	}
-	sort.Strings(days)
-	var res []DailyStat
-	for _, d := range days {
-		a := m[d]
-		res = append(res, DailyStat{
-			Date:               d,
-			Count:              a.count,
-			AvgBrewTimeSeconds: round2(a.sumBrew / float64(a.count)),
-			AvgPeakPressureBar: round2(a.sumPressure / float64(a.count)),
-		})
-	}
-	return c.JSON(http.StatusOK, res)
 }
 
 func pick[T any](list []T, r *rand.Rand) T { return list[r.Intn(len(list))] }
